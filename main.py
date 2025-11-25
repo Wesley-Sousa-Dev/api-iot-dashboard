@@ -16,7 +16,6 @@ st.set_page_config(
 
 # --- CONFIGURAÇÕES GLOBAIS ---
 DB_NAME = 'sensores.db'
-HISTORY_LIMIT = 200 
 TIMEZONE_BR = pytz.timezone('America/Sao_Paulo')
 
 # Adicionei cores específicas para cada sensor aqui
@@ -63,11 +62,14 @@ def fetch_data_history_from_db(limit):
 
     latest_readings = {}
     
+    # Buscamos um pouco mais de dados (limit * 3) para garantir que
+    # tenhamos dados suficientes para todos os sensores, já que a tabela
+    # contém dados misturados.
     query = f"""
     SELECT sensorId, value, timestamp 
     FROM sensor_data 
     ORDER BY timestamp DESC 
-    LIMIT {limit * 3}; 
+    LIMIT {limit * 4}; 
     """
     
     try:
@@ -125,7 +127,6 @@ def format_value(value, sensor_id):
         return str(value)
 
 # --- FUNÇÕES DE UI ---
-
 def create_sensor_chart(df_history, sensor_id):
     """Cria um gráfico Plotly estilizado."""
     config = DEFAULT_SENSORS_INFO.get(sensor_id)
@@ -242,14 +243,25 @@ with st.sidebar:
     auto_refresh = st.toggle("Auto-Refresh", value=True)
     
     refresh_interval = st.slider(
-        "Intervalo (segundos)", 
-        min_value=1, max_value=30, value=3
+        "Atualização (segundos)", 
+        min_value=1, max_value=30, value=10
+    )
+
+    st.markdown("---")
+    
+    # === NOVO SLIDER PARA LIMITAR DADOS ===
+    history_limit = st.slider(
+        "Pontos no Gráfico",
+        min_value=20, 
+        max_value=500, 
+        value=100, 
+        step=20,
+        help="Controla a quantidade de dados passados mostrados nos gráficos."
     )
 
 # --- LÓGICA PRINCIPAL ---
-
-# 1. Carregar Dados
-history_df, latest_readings = fetch_data_history_from_db(HISTORY_LIMIT)
+# 1. Carregar Dados (Usando o valor do slider history_limit)
+history_df, latest_readings = fetch_data_history_from_db(history_limit)
 
 # CSS AVANÇADO: Cards, Gráficos com Bordas Arredondadas
 st.markdown(
@@ -330,7 +342,7 @@ tab_graficos, tab_dados = st.tabs(["📈 Gráficos Visuais", "📋 Dados Brutos 
 # ABA 1: GRÁFICOS
 with tab_graficos:
     if not history_df.empty:
-        st.caption("Visualização em tempo real com preenchimento contínuo.")
+        st.caption(f"Visualizando os últimos {len(history_df)} registros (Aprox. {history_limit} por sensor).")
         
         chart_grid = st.columns(2)
         sensors_list = sorted(DEFAULT_SENSORS_INFO.keys())
