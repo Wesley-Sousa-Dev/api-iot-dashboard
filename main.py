@@ -18,7 +18,7 @@ st.set_page_config(
 DB_NAME = 'sensores.db'
 TIMEZONE_BR = pytz.timezone('America/Sao_Paulo')
 
-# Adicionei cores específicas para cada sensor aqui
+# Cores específicas para cada sensor
 DEFAULT_SENSORS_INFO = {
     "M040": {
         "type": "motion", "label": "Movimento", "unit": "", "icon": "🚶‍♂️", 
@@ -62,9 +62,9 @@ def fetch_data_history_from_db(limit):
 
     latest_readings = {}
     
-    # Buscamos um pouco mais de dados (limit * 3) para garantir que
-    # tenhamos dados suficientes para todos os sensores, já que a tabela
-    # contém dados misturados.
+    # Busca-se uma quantidade maior de dados (limit * 3) para garantir 
+    # que haja informações suficientes para todos os sensores, considerando 
+    # que a tabela contém dados misturados.
     query = f"""
     SELECT sensorId, value, timestamp 
     FROM sensor_data 
@@ -145,7 +145,7 @@ def create_sensor_chart(df_history, sensor_id):
     secondary_background_color = config.get("secondaryBackgroundColor", "#2D3748")
     text_color = '#E2E8F0'    # Cinza claro
     
-    # Título Formatado com a cor do sensor
+    # Título formatado com a cor do sensor
     chart_title = f"<span style='color:{primary_color}'><b>{config['icon']} {config['label']}</b></span>"
     if config['unit']:
         chart_title += f" <span style='font-size: 0.8em; color: #A0AEC0;'>({config['unit']})</span>"
