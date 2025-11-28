@@ -1,4 +1,4 @@
-# Dashboard de Sensores
+# API REST IoT
 ![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
 ![Streamlit](https://img.shields.io/badge/Frontend-Streamlit-red)
 ![SQLite](https://img.shields.io/badge/Database-SQLite3-green)
@@ -6,9 +6,9 @@
 
 
 ## 📝 Visão geral
-O "Dashboard de Sensores" é um sistema completo de consumo (ETL), persistência e visualização de dados meteorológicos. Ele permite que usuários visualizem métricas em tempo real, identifiquem tendências através de gráficos históricos e exportem dados na forma de CSV.
+O "API REST IoT" é um sistema distribuído projetado para a ingestão, persistência e monitoramento de telemetria em tempo real. O projeto estabelece uma infraestrutura de comunicação onde dispositivos de borda (edge devices) reportam estados ambientais e de ocupação para um nó central de processamento.
 
-O projeto simula um ambiente IoT onde sensores enviam dados que são capturados, armazenados e exibidos em um dashboard interativo.
+A arquitetura da solução baseia-se no desacoplamento entre a camada de produção de dados e a camada de visualização, utilizando uma API REST como ponto de entrada unificado. Simuladores externos (em Java) atuam como produtores independentes, disparando requisições HTTP contendo cargas JSON padronizadas. O sistema processa esses eventos de forma assíncrona e intercalada, simulando um ambiente real onde múltiplos sensores (Temperatura, Umidade, Luminosidade, Movimento) enviam leituras em momentos distintos e aleatórios.
 
 <div align="center">
 <img 
@@ -20,21 +20,23 @@ O projeto simula um ambiente IoT onde sensores enviam dados que são capturados,
 
 ---
 
-## ✨ Principais funcionalidades 
+## ✨ Principais Funcionalidades
+- **Ingestão de Dados via API:** Endpoint dedicado para recepção de requisições POST vindas de sensores simulados;
 - **Monitoramento em Tempo Real:** Cards dinâmicos exibindo os dados mais recentes recebidos;
 - **Visualização Interativa:** Gráficos de linha e barra desenvolvidos com Plotly, permitindo zoom e seleção de dados;
 - **Controle de Atualização:** Intervalo de *refresh* automático customizável (com opção de pausa);
-- **Persistência de Dados:** Armazenamento seguro e leve utilizando SQLite;
+- **Persistência de Dados:** Armazenamento imediato, seguro e leve das leituras (ID, Valor, Timestamp) utilizando o banco de dados SQLite;
 - **Filtragem Avançada:** Filtros para selecionar sensores específicos;
 - **Exportação de Dados:** Download imediato dos dados filtrados em formato CSV.
 
 ---
 
-## 🛠 Tecnologias usadas
+## 🛠 Tecnologias Utilizadas
 Este projeto foi desenvolvido utilizando as seguintes tecnologias:
 
 - **Linguagem Principal:** [Python](https://www.python.org/);
 - **Frontend / Dashboard:** [Streamlit](https://streamlit.io/);
+- **Backend / Ingestão:** Python (Script de escuta e persistência);
 - **Banco de Dados:** SQLite3 (Nativo do Python);
 - **Manipulação de Dados:** [Pandas](https://pandas.pydata.org/);
 - **Gráficos:** [Plotly Express](https://plotly.com/python/);
@@ -46,7 +48,7 @@ Este projeto foi desenvolvido utilizando as seguintes tecnologias:
 ### Pré-requisitos
   Antes de começar, certifique-se de ter instalado em sua máquina:
   - [Python 3.8+](https://www.python.org/downloads/);
-  - [Java Runtime Environment (JRE)](https://www.java.com/pt-BR/download/) (para rodar os simuladores);
+  - [Java Runtime Environment (JRE)](https://www.java.com/pt-BR/download/) (para rodar os simuladores .jar);
   - [Git](https://git-scm.com/).
 
   ### Passo 1. Clone o repositório
@@ -76,7 +78,7 @@ Este projeto foi desenvolvido utilizando as seguintes tecnologias:
     pip install -r requirements.txt
    ```
 
-  ### Passo 4. Iniciando a Simulação de Dados (Backend IoT)
+  ### Passo 4. Iniciando a Simulação de Dados
   Este projeto utiliza simuladores Java para gerar os dados dos sensores. Abra um novo terminal, mantenha o ambiente virtual ativo e execute
   
   1. Inicie o servidor REST:
