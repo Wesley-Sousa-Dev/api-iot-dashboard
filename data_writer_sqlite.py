@@ -1,102 +1,94 @@
 import sqlite3
-import time
-import random
-from datetime import datetime, timezone
+import json
+from flask import Flask, request, jsonify
+from datetime import datetime
 
-# --- CONFIGURAÇÕES DO ESCRITOR ---
+# --- CONFIGURAÇÕES ---
 DB_NAME = 'sensores.db'
-WRITE_INTERVAL = 1  # Frequência com que o simulador envia/escreve dados (1 segundo)
+API_PORT = 8080
 
-# Informações fixas sobre os sensores
-DEFAULT_SENSORS_INFO = {
-    "M040": {"type": "motion", "min_val": 0, "max_val": 1, "format": "{:.0f}"}, 
-    "T010": {"type": "temperature", "min_val": 18, "max_val": 35, "format": "{:.1f}"},
-    "H020": {"type": "humidity", "min_val": 30, "max_val": 90, "format": "{:.0f}"},
-    "L030": {"type": "light", "min_val": 0, "max_val": 1000, "format": "{:.0f}"}
-}
+app = Flask(__name__)
 
 def get_db_connection():
     """Cria e retorna uma conexão com o banco de dados SQLite."""
     conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row  # Permite acessar colunas por nome
     return conn
 
-def setup_database(conn):
-    """Garante que a tabela de dados dos sensores exista."""
+def init_db():
+    """Inicializa o banco de dados e a tabela se não existirem."""
+    conn = get_db_connection()
     cursor = conn.cursor()
+    # Cria a tabela e mantem 'type' para facilitar no dashboard
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS sensor_data (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             sensorId TEXT NOT NULL,
-            type TEXT NOT NULL,
+            type TEXT,
             value REAL NOT NULL,
             timestamp TEXT NOT NULL
         )
     """)
     conn.commit()
-    print("Banco de dados SQLite configurado. Tabela 'sensor_data' pronta.")
+    conn.close()
+    print(f"--- Banco de dados '{DB_NAME}' inicializado/verificado com sucesso ---")
 
-def generate_random_value(sensor_id):
-    """Gera um valor aleatório dentro de uma faixa específica."""
-    config = DEFAULT_SENSORS_INFO.get(sensor_id)
-    if not config:
-        return random.uniform(0, 100)
-
-    min_val, max_val = config["min_val"], config["max_val"]
-    
-    if sensor_id == "M040":
-        return random.choice([0, 1])
-    
-    if config["format"] == "{:.0f}":
-        return round(random.uniform(min_val, max_val), 0)
-    else:
-        return round(random.uniform(min_val, max_val), 1)
-
-def write_reading_to_db(conn, reading):
-    """Insere uma única leitura na tabela sensor_data."""
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO sensor_data (sensorId, type, value, timestamp)
-        VALUES (?, ?, ?, ?)
-    """, (reading["sensorId"], reading["type"], reading["value"], reading["timestamp"]))
-    conn.commit()
-
-def simulate_data_flow():
-    """Simula o simulador lendo dados e escrevendo no DB."""
-    conn = get_db_connection()
-    setup_database(conn)
-    
-    print(f"\n--- INICIANDO ESCRITA DE DADOS NO {DB_NAME} ---")
-    print(f"Intervalo de escrita: {WRITE_INTERVAL} segundo(s).")
-    
-    while True:
-        # 1. Simula a escolha de uma leitura (como se fosse recebida da API)
-        random_sensor_id = random.choice(list(DEFAULT_SENSORS_INFO.keys()))
-        sensor_type = DEFAULT_SENSORS_INFO[random_sensor_id]["type"]
-
-        reading = {
-            "sensorId": random_sensor_id,
-            "type": sensor_type,
-            "value": generate_random_value(random_sensor_id),
-            "timestamp": datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
-        }
-
-        # 2. Escreve a leitura no banco de dados
-        try:
-            write_reading_to_db(conn, reading)
-            print(f"[{datetime.now().strftime('%H:%M:%S')}] Escrito: {reading['sensorId']} = {reading['value']}")
-        except Exception as e:
-            print(f"Erro ao escrever no DB: {e}")
-            # Tenta reconectar em caso de erro
-            conn = get_db_connection()
-            setup_database(conn) 
-
-        # 3. Pausa para simular o intervalo de escrita
-        time.sleep(WRITE_INTERVAL)
-
-if __name__ == "__main__":
+@app.route('/api/sensor/data', methods=['POST'])
+def receive_sensor_data():
+    """
+    Endpoint que recebe os dados do simulador Java.
+    Espera um JSON no formato:
+    {
+        "sensorId": "T010",
+        "type": "temperature",
+        "value": 23.5,
+        "timestamp": "2025-01-18T14:32:55Z"
+    }
+    """
     try:
-        simulate_data_flow()
-    except KeyboardInterrupt:
-        print("\nEscrita de dados interrompida pelo usuário.")
+        data = request.json
+        
+        # Validação básica
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+            
+        sensor_id = data.get('sensorId')
+        sensor_type = data.get('type')
+        value = data.get('value')
+        timestamp = data.get('timestamp')
+
+        # Conecta e salva no banco
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            INSERT INTO sensor_data (sensorId, type, value, timestamp)
+            VALUES (?, ?, ?, ?)
+        """, (sensor_id, sensor_type, value, timestamp))
+        
+        conn.commit()
+        conn.close()
+        
+        # Log no terminal dos dados recebidos
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] Recebido: {sensor_id} ({sensor_type}) = {value}")
+        
+        return jsonify({"status": "success", "message": "Data saved"}), 201
+
     except Exception as e:
-        print(f"Ocorreu um erro no simulador de escrita: {e}")
+        print(f"Erro ao processar requisição: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/')
+def home():
+    """Rota raiz apenas para verificar se a API está online."""
+    return "API IoT Online. Aguardando dados em /api/sensor/data", 200
+
+if __name__ == '__main__':
+    # Inicializa o banco antes de subir o servidor
+    init_db()
+    
+    print(f"🚀 Servidor API rodando na porta {API_PORT}...")
+    print(f"📡 Endpoint esperado: http://localhost:{API_PORT}/api/sensor/data")
+    
+    # Roda o servidor Flask
+    app.run(host='0.0.0.0', port=API_PORT, debug=False)
