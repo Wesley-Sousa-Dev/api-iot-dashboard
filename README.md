@@ -36,7 +36,7 @@ Este projeto foi desenvolvido utilizando as seguintes tecnologias:
 
 - **Linguagem Principal:** [Python](https://www.python.org/);
 - **Frontend / Dashboard:** [Streamlit](https://streamlit.io/);
-- **Backend / Ingestão:** Python (Script de escuta e persistência);
+- **Backend / Ingestão:** [Flask](https://flask.palletsprojects.com/);
 - **Banco de Dados:** SQLite3 (Nativo do Python);
 - **Manipulação de Dados:** [Pandas](https://pandas.pydata.org/);
 - **Gráficos:** [Plotly Express](https://plotly.com/python/);
@@ -78,31 +78,28 @@ Este projeto foi desenvolvido utilizando as seguintes tecnologias:
     pip install -r requirements.txt
    ```
 
-  ### Passo 4. Iniciando a Simulação de Dados
-  Este projeto utiliza simuladores Java para gerar os dados dos sensores. Abra um novo terminal, mantenha o ambiente virtual ativo e execute
-  
-  1. Inicie o servidor REST:
-  ```bash
-    cd utils
-    java -jar server-iot-rest-example.jar
-  ```
+  ### Passo 4: Inicializar a API de Coleta e Persistência de Dados
+  Neste passo, iniciamos o servidor Python que ficará escutando na porta 8080. Ele é responsável por receber os dados dos sensores e salvar no banco de dados SQLite.
 
-  2. Inicie os sensores (em outro terminal ou aba):
+  Execute o comando abaixo e **mantenha o terminal aberto**:
+
+  ```bash
+  python data_writer_sqlite.py
+  ```
+  Você verá a mensagem: "🚀 Servidor API rodando na porta 8080..."
+
+  ### Passo 5. Iniciando a Simulação de Dados
+  Com a API rodando, agora precisamos ligar os sensores para gerar os dados. Abra um novo terminal e execute o simulador:
+  
   ```bash 
     cd utils
     java -jar simulator-sensores-iot.jar
   ```
 
-  ### Passo 5. Coleta e Persistência de Dados
-  Agora precisamos rodar o script Python que consome a API Java e salva no SQLite. Na raiz do projeto, execute:
-  ```bash 
-    python data_writer_sqlite.py
-  ```
-  OBS.: Deixe este script rodando em segundo plano para que o banco de dados seja alimentado continuamente.
-
+  OBS.: Não é executado o "server-iot-rest-example.jar", pois nossa API Python "data_writer_sqlite.py" já cumpre o papel de servidor, substituindo o exemplo em Java.
 
   ### Passo 6. Executando o Dashboard
-  Finalmente, inicie a interface visual com o Streamlit:
+  Finalmente, inicie a interface visual com o Streamlit em um terceiro terminal:
   ```bash
     streamlit run main.py
   ```
